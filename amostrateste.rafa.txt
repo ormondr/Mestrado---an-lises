@@ -1,0 +1,86 @@
+# Utilizei o RFmix 1.5 daqui: https://sites.google.com/site/rfmixlocalancestryinference/
+# Todos os passos foram baseados no pipeline da Alicia aqui: https://github.com/armartin/ancestry_pipeline
+# na v2 existem regios com baixa recombinação e todos indivíduos tem a mesma ancestralidade para aquela regiao
+
+# Inputs
+## Target data: Genotyping or seq data
+## Reference sample for Phasing
+## Reference phased genotypes, redundanct?
+
+# 1) Download the Reference haplotypes sample from here https://mathgen.stats.ox.ac.uk/impute/1000GP_Phase3.html
+
+# Download dos arquivos vcfs referência: ALL.chr*.vcf.gz
+
+wget ftp://ftp.1000genomes.ebi.ac.uk/vol1/ftp/release/20130502/ALL.chr*.vcf.gz
+wget ftp://ftp.1000genomes.ebi.ac.uk/vol1/ftp/release/20130502/ALL.chr*.vcf.gz.tbi
+
+#Salvei todos esses arquivos baixados em uma pasta
+
+mkdir ALL.1KG
+mv ALL.* ALL.1KG
+
+wget https://mathgen.stats.ox.ac.uk/impute/1000GP_Phase3.tgz 
+
+#Dezipar arquivo (se baixar como .tgz)
+tar -xvzf 1000GP_Phase3.tgz
+
+#Eu tinha dado "gunzip" arquivo ficou ".tar" por isso dezipei com:
+tar -xvzf 1000GP_Phase3.tar
+
+# 1.1) Seleção dos haplotipos de interesse do 1KG: EUR (GBR, TSI, IBR); NAT (PEL, MXL); AFR (ESN, GWD, LWK, MSL, YRI)
+
+egrep "GBR|TSI|IBR|PEL|MXL|ESN|GWD|LWK|MSL|YRI" ./1000GP_Phase3/1000GP_Phase3.sample > Painel_Haps_BR.sample
+
+awk '{print $1}' Painel_Haps_BR.sample > ids_Painel
+
+# 1.2) Separar apenas os haplotipos de interesse na amostra vcf referencia (Phasing)
+
+#baixar bcftools:
+
+wget https://github.com/samtools/bcftools/releases/download/1.9/bcftools-1.9.tar.bz2
+tar -vxjf bcftools-1.9.tar.bz2
+cd bcftools-1.9
+make
+
+./bcftools-1.9/bcftools convert -hapsample ./ALL.1KG/ALL.chr1.phase3_shapeit2_mvncall_integrated_v5b.20130502.genotypes.vcf.gz -S ./ids_Painel -o teta
+
+./bcftools-1.9/bcftools annotate ./ALL.1KG/ALL.chr1.phase3_shapeit2_mvncall_integrated_v5b.20130502.genotypes.vcf.gz -S ./ids_Painel -Ov -o teta.vcf
+
+
+# transformar em bed bim e fam para juntar e posteriormente usar no ADMIXTURE e transformar em .haps.gz para shapeit e para RFmix
+for i in {1..1}; do plink1.9 --vcf ./teta.vcf --const-fid 0 --maf 0.01 --make-bed --out 1KG_chr${i}; done
+
+# editar o bim tanto do alvo quanto da referência, pois precisam estar com o mesmo padrão. Primeiro salvei os arquivos para "_ori" e depois salvei com o mesmo nome que estava antes
+awk '{print $1 , $1":"$4 , $4 , $3 , $5 , $6}' 1KG_chr1_ori.bim > 1KG_chr1.bim
+awk '{print $1 , $1":"$4 , $4 , $3 , $5 , $6}' ./alvo/Rafa_20_ori.bim > ./alvo/Rafa_20.bim
+
+# juntar REFEREncia 1kg com o seu alvo(no caso Rafa_20.bim)
+
+# excluir positions duplicadas e separar o alvo por cromossomos
+for i in {1..1}; do plink1.9 --bfile 1KG_chr${i} --list-duplicate-vars; plink1.9 --bfile 1KG_chr${i} --exclude plink.dupvar --make-bed --out 1KG_chr${i}_pre;done 
+
+for i in {1..1}; do plink1.9 --bfile 1KG_chr${i} --list-duplicate-vars; plink1.9 --bfile 1KG_chr${i} --exclude plink.dupvar --make-bed --out 1KG_chr${i}_pre; plink1.9 --bfile ./alvo/Rafa_20 --chr ${i} --make-bed --out Rafa_20${i}; done
+
+# Finalmente juntando e fazendo o QC. Note que em seguida eu nao uso o arquivo que foi juntado. Mas esse junto pode ser utilizado, por exemplo, para o ADMIXTURE.
+for i in {1..1}; do plink1.9 --bfile 1KG_chr${i}_pre --bmerge Rafa_20${i} --make-bed --out 1KG_20rafa${i}; plink1.9 --bfile Rafa_20${i} --flip 1KG_20rafa${i}-merge.missnp --exclude plink.dupvar --make-bed --out Rafa_20${i}_limpo; plink1.9 --bfile 1KG_chr${i}_pre --bmerge Rafa_20${i}_limpo --make-bed --out 1KG_20rafa${i}; plink1.9 --bfile 1KG_chr${i}_pre --exclude 1KG_20rafa${i}-merge.missnp --make-bed --out 1KG_chr${i}_limpo; plink1.9 --bfile 1KG_chr${i}_limpo --bmerge Rafa_20${i}_limpo --make-bed --out 1KG_20rafa${i}; plink1.9 --bfile 1KG_20rafa${i} --geno 0.1 --maf 0.01 --make-bed --out 1KG_20rafa${i}; done
+
+for i in {1..22}; do plink --bfile 1KG_SGDP_chr${i}_pre --bmerge Bro665ad_INPD_QCed${i} --make-bed --out 1KG_SGDP_INPD${i}; plink --bfile Broad_INPD_QCed${i} --flip 1KG_SGDP_INPD${i}-merge.missnp --exclude plink.dupvar --make-bed --out Broad_INPD_QCed${i}_limpo; plink --bfile 1KG_SGDP_chr${i}_pre --bmerge Broad_INPD_QCed${i}_limpo --make-bed --out 1KG_SGDP_INPD${i}; plink --bfile 1KG_SGDP_chr${i}_pre --exclude 1KG_SGDP_INPD${i}-merge.missnp --make-bed --out 1KG_SGDP_chr${i}_limpo; plink --bfile 1KG_SGDP_chr${i}_limpo --bmerge Broad_INPD_QCed${i}_limpo --make-bed --out 1KG_SGDP_INPD${i}; plink --bfile 1KG_SGDP_INPD${i} --geno 0.1 --maf 0.01 --make-bed --out 1KG_SGDP_INPD${i}; done
+
+# 3) shapeit **mudar ref** Cerca de 8h - Usei o shapeit4 daqui (https://odelaneau.github.io/shapeit4/) pra instalar ele precisa instalar dois outros programas (HTSlib
+BOOST)
+Do htslib:
+ git clone https://github.com/samtools/htslib.git
+autoreconf -i  # Build the configure script and install files it uses
+./configure    # Optional but recommended, for choosing extra functionality
+make
+make install
+
+sudo apt-get install libboost-all-dev
+
+git clone https://github.com/odelaneau/shapeit4.git (instalar de acordo com os passos descritos no site do programa)
+
+#executar comando
+
+sudo shapeit4 --input ../Rafa_201.vcf.gz --map ../1000GP_Phase3/genetic_map_chr1_combined_b37.txt --region 1 --reference ../ALL.chr1.phase3_shapeit2_mvncall_integrated_v5b.20130502.genotypes.vcf.gz --out VCP
+
+###aqui o phasing já está feito 
