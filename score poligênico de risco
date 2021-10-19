@@ -1,0 +1,8 @@
+#Rodar PRSice para todos
+Rscript PRSice.R --prsice ./PRSice_linux --base ./PGC3_SCZ_wave3_public.v2.tsv --target ./Out4_merged_QCed --out ./Out_PRStodos_semLAI --thread 5 --all-score --fastscore T --extract ./Out_PRStodos_semLAI.valid
+
+# Extrair 10 indivíduos casos e 10 controles
+grep T SCZ_QC.fam | head > casosSCZ
+
+
+grep C SCZ_QC.fam | head >> casosSCZ
