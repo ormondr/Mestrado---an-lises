@@ -1,0 +1,10 @@
+# necessário fazer coluna só com os fenótipos, o arquivo precisa ter 3 colunas: FID IID e pheno
+awk '{print "0",$1,$5}' Pheno_Parents_Sep20_PGC.txt > pheno_SCZ
+plink --bfile coorteINPD --pheno phenoSCZ --make-bed --out PaisINPD_SCZ
+
+# Garantir o mesmo número de snps nos dois arquivos
+plink2 --bfile Aqui_coorte1 --extract Aqui_coorte2.bim  --make-bed --out Out1
+plink2 --bfile Aqui_coorte2 --extract Aqui_coorte1.bim --make-bed --out Out2
+# juntei
+plink2 --bfile Out1 --bmerge Out2 --make-bed --out Out3_merged
+plink2 --bfile Out3_merged --maf 0.01 --geno 0.01 --mind 0.01 --out Out4_merged_QCed
