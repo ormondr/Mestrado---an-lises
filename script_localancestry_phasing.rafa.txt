@@ -1,6 +1,5 @@
 # Utilizei o RFmix 1.5 daqui: https://sites.google.com/site/rfmixlocalancestryinference/
 # Todos os passos foram baseados no pipeline da Alicia aqui: https://github.com/armartin/ancestry_pipeline
-# na v2 existem regios com baixa recombinação e todos indivíduos tem a mesma ancestralidade para aquela regiao
 
 # Inputs
 ## Target data: Genotyping or seq data
