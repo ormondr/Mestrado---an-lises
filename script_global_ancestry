@@ -1,0 +1,4 @@
+##O admixture gera uma porcentagem de cada ancestralidade para cada indivíduo 
+#O número 3 corresponde às três populações ancestrais (africana, europeia e nativo americana) 
+
+admixture arquivo.bed 3 -j4
