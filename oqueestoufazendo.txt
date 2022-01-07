@@ -1,0 +1,76 @@
+
+
+
+# Utilizei o RFmix 1.5 daqui: https://sites.google.com/site/rfmixlocalancestryinference/
+# Todos os passos foram baseados no pipeline da Alicia aqui: https://github.com/armartin/ancestry_pipeline
+# na v2 existem regios com baixa recombinação e todos indivíduos tem a mesma ancestralidade para aquela regiao
+
+# Inputs
+## Target data: Genotyping or seq data
+## Reference sample for Phasing
+## Reference phased genotypes, redundanct?
+
+# 1) Download the Reference haplotypes sample from here https://mathgen.stats.ox.ac.uk/impute/1000GP_Phase3.html
+
+# Download dos arquivos vcfs referência: ALL.chr*.vcf.gz
+
+wget ftp://ftp.1000genomes.ebi.ac.uk/vol1/ftp/release/20130502/ALL.chr*.vcf.gz
+wget ftp://ftp.1000genomes.ebi.ac.uk/vol1/ftp/release/20130502/ALL.chr*.vcf.gz.tbi
+
+#Salvei todos esses arquivos baixados em uma pasta
+
+mkdir ALL.1KG
+mv ALL.* ALL.1KG
+
+wget https://mathgen.stats.ox.ac.uk/impute/1000GP_Phase3.tgz 
+
+#Dezipar arquivo (se baixar como .tgz)
+tar -xvzf 1000GP_Phase3.tgz
+
+#Eu tinha dado "gunzip" arquivo ficou ".tar" por isso dezipei com:
+tar -xvzf 1000GP_Phase3.tar
+
+# 1.1) Seleção dos haplotipos de interesse do 1KG: EUR (GBR, TSI, IBR); NAT (PEL, MXL); AFR (ESN, GWD, LWK, MSL, YRI)
+
+egrep "GBR|TSI|IBR|PEL|MXL|ESN|GWD|LWK|MSL|YRI" ./1000GP_Phase3/1000GP_Phase3.sample > Painel_Haps_BR.sample
+
+awk '{print $1}' Painel_Haps_BR.sample > ids_Painel
+
+# 1.2) Separar apenas os haplotipos de interesse na amostra vcf referencia (Phasing)
+
+#baixar bcftools:
+
+wget https://github.com/samtools/bcftools/releases/download/1.9/bcftools-1.9.tar.bz2
+tar -vxjf bcftools-1.9.tar.bz2
+cd bcftools-1.9
+make
+
+
+./bcftools-1.9/bcftools convert -hapsample ./ALL.1KG/ALL.chr1.phase3_shapeit2_mvncall_integrated_v5b.20130502.genotypes.vcf.gz -S ./ids_Painel -o teta_chr
+
+./bcftools-1.9/bcftools annotate ./ALL.1KG/ALL.chr1.phase3_shapeit2_mvncall_integrated_v5b.20130502.genotypes.vcf.gz -S ./ids_Painel -Ov -o teta_chr.vcf
+
+
+# 2) merge das datasets melhorado. Aqui eu faço o index e filtro de maf após o merge, perco HD mas o resultado sai mais redondo e com pouca chatice. Alem disso gero o hap/legend/sample para o shapeit
+
+# transformar em bed bim e fam para juntar e posteriormente usar no ADMIXTURE e transformar em .haps.gz para shapeit e para RFmix
+
+for i in {1..1}; do plink1.9 --vcf ./teta_chr.vcf --const-fid 0 --maf 0.01 --make-bed --out 1KG_chr_chr${i}; done
+
+# editar o bim tanto do alvo quanto da referência, pois precisam estar com o mesmo padrão. Primeiro salvei os arquivos para "_ori" e depois salvei com o mesmo nome que estava antes
+awk '{print $1 , $1":"$4 , $4 , $3 , $5 , $6}' ../coorteSCZ/SCZ_QC.bim > ../coorteSCZ/SCZ_QC_ori.bim
+awk '{print $1 , $1":"$4 , $4 , $3 , $5 , $6}' 1KG_chr_chr1_ori.bim > 1KG_chr_chr1.bim
+
+# excluir positions duplicadas e separar o alvo por cromossomos
+
+for i in {1..1}; do plink1.9 --bfile 1KG_chr_chr${i} --list-duplicate-vars; plink1.9 --bfile 1KG_chr_chr${i} --exclude plink.dupvar --make-bed --out 1KG_chr_chr${i}_pre; plink1.9 --bfile ../coorteSCZ/SCZ_QC --chr ${i} --make-bed --out ../coorteSCZ/SCZ_QC${i}; done
+
+for i in {1..1}; do plink1.9 --bfile ../coorteSCZ/SCZ_QC${i} --list-duplicate-vars; plink1.9 --bfile ../coorteSCZ/SCZ_QC${i} --exclude plink.dupvar --make-bed --out ../coorteSCZ/SCZ_QC${i};done
+
+# Finalmente juntando e fazendo o QC. Note que em seguida eu nao uso o arquivo que foi juntado. Mas esse junto pode ser utilizado, por exemplo, para o ADMIXTURE.
+
+for i in {1..1}; do plink1.9 --bfile 1KG_chr_chr${i}_pre --bmerge ../coorteSCZ/SCZ_QC${i} --make-bed --out 1KG_SCZ${i}; plink1.9 --bfile ../coorteSCZ/SCZ_QC${i} --flip 1KG_SCZ${i}-merge.missnp --exclude plink.dupvar --make-bed --out ../coorteSCZ/SCZ_QC${i}_limpo; plink1.9 --bfile 1KG_chr_chr${i}_pre --bmerge ../coorteSCZ/SCZ_QC${i}_limpo --make-bed --out 1KG_SCZ${i}; plink1.9 --bfile 1KG_chr_chr${i}_pre --exclude 1KG_SCZ${i}-merge.missnp --make-bed --out 1KG_chr_chr${i}_limpo; plink1.9 --bfile 1KG_chr_chr${i}_limpo --bmerge ../coorteSCZ/SCZ_QC{i}_limpo --make-bed --out 1KG_SCZ${i}; plink1.9 --bfile 1KG_SCZ${i} --geno 0.1 --maf 0.01 --make-bed --out 1KG_SCZ${i}; done
+
+###### Failed to pen IKG_SCZ1.bed #########################3
+
+
