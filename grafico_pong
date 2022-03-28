@@ -1,0 +1,53 @@
+
+###Instalar pong pela linha de comando
+
+pip install pong
+
+#Para rodar o pong precisa de três arquivos, o comando pra rodar é:
+pong -m admixture.filemap -i admixture.ind2pop -n pop_order_expandednames.txt
+
+#o arquivo .filemap é um arquivo de texto com tres colunas e nesse caso somente uma linha, substituir a ultima coluna pelo resultado do admixture
+##Exemplo: k3r2	3	resultadmixture.3.Q
+#o ind2pop é a ordem das populacoes no arquivo q vc rodou o admixture, pelo codigo de populacao. por ex, se tem 3 SCZ, 3 EUR, 3 AFR
+##Exemplo: 
+SCZ
+SCZ
+SCZ
+EUR
+EUR
+EUR
+AFR
+AFR
+AFR
+
+#Se ja souber exatamente a ordem das pops e quantos de cada uma, é, o "ind2pop pode ser feito com:
+
+{printf 'SCZ\n%.0s' {1..3}; printf 'EUR\n%.0s' {1..3}; printf 'AFR\n%.0s' {1..3}; printf 'NAT\n%.0s' {1..3}} > teste.ind2pop
+
+#Se não for simples fazer da forma acima, pode ser feito da seguinte forma
+## Primeiro na linha de comando:
+
+awk '{print "PEL", $1}' PEL_1KG > IDS_PEL_POP
+awk '{print "IBS", $1}' IBS_1KG_REF > IDS_IBS_POP
+awk '{print "YRI", $1}' YRI_1KG_REF > IDS_YRI_POP
+awk '{print "SCZ", $2}' ARQUIVO_PLINK_SO_COM_SCZ.fam > IDS_SCZ_POP
+
+cat IDS_PEL_POP IDS_IBS_POP IDS_YRI_POP IDS_SCZ_POP > POPULATION_CODES.txt
+
+##Depois vai pro R
+
+fam <- read.table("arquivo.fam", h=F)
+popcodes <- read.table("POPULATION_CODES.txt", h=F)
+
+library(dplyr)
+
+colnames(fam)[2] <- "ID"
+colnames(popcodes)[2] <- "ID"
+
+match_pop <- inner_join(fam, popcodes, by="ID")
+
+ind2pop <- match_pop[,7]
+
+write.table(ind2pop, "admixture_scz.ind2pop", col.names=F, row.names=F, quote=F)
+
+#E o pop_order.txt é uma legenda desses codigos de pop pra ficar bonito no seu gráfico
