@@ -3,5 +3,11 @@
 
 admixture arquivo.bed 3 -j4
 
-
+## rodar o admixture 
+##coloco esse arquivo de saída pra ser log mas os arquivos que geram nao sao com essa terminacao 
 /mnt/genetica_1/Phasing/admixture_linux-1.3.0/admixture hg38_PEP2018_allchr.bed 3 -j4 > admixturepep2018
+
+#aqui eu gero o arquivo só com os ids pra juntar 
+awk '{print $1}' hg38_PEP2018_allchr.fam > para_juntar_com_admixture 
+
+paste para_juntar_com_admixture hg38_PEP2018_allchr.3.Q > admixture_pepmarquinhos
