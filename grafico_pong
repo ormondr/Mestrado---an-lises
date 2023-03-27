@@ -6,8 +6,11 @@ pip install pong
 #Para rodar o pong precisa de três arquivos, o comando pra rodar é:
 pong -m admixture.filemap -i admixture.ind2pop -n pop_order_expandednames.txt
 
-#o arquivo .filemap é um arquivo de texto com tres colunas e nesse caso somente uma linha, substituir a ultima coluna pelo resultado do admixture
-##Exemplo: k3r2	3	resultadmixture.3.Q
+#o arquivo .filemap é um arquivo de texto com tres colunas e nesse caso somente uma linha, substituir a ultima coluna pelo resultado do admixture e a segunda coluna pelo K usado para rodar o pong
+##Exemplo:
+#3 ancestralidades: k3r2	3	resultadmixture.3.Q
+#4 ancestralidades: k3r2	4	resultadmixture.4.Q
+
 #o ind2pop é a ordem das populacoes no arquivo q vc rodou o admixture, pelo codigo de populacao. por ex, se tem 3 SCZ, 3 EUR, 3 AFR
 ##Exemplo: 
 SCZ
