@@ -54,3 +54,21 @@ ind2pop <- match_pop[,7]
 write.table(ind2pop, "admixture_scz.ind2pop", col.names=F, row.names=F, quote=F)
 
 #E o pop_order.txt é uma legenda desses codigos de pop pra ficar bonito no seu gráfico
+
+
+
+
+
+
+
+
+################################# 02 outubro #############
+altura:
+pong -m height_combined.filemap -i ind2pop_height.txt -n height_order_expandednames.txt -l ../cores_pong.txt
+
+esquizo:
+
+
+
+
+
