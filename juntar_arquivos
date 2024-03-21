@@ -7,4 +7,4 @@ plink2 --bfile Aqui_coorte1 --extract Aqui_coorte2.bim  --make-bed --out Out1
 plink2 --bfile Aqui_coorte2 --extract Aqui_coorte1.bim --make-bed --out Out2
 # juntei
 plink2 --bfile Out1 --bmerge Out2 --make-bed --out Out3_merged
-plink2 --bfile Out3_merged --maf 0.01 --geno 0.01 --mind 0.01 --out Out4_merged_QCed
+plink2 --bfile Out3_merged --maf 0.01 --geno 0.01 --mind 0.01 --make-bed --out Out4_merged_QCed
